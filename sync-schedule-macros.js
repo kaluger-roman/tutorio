@@ -130,6 +130,9 @@ const getNextWeekEnd = () => {
 const getCurrentMonthStart = () =>
   new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
+const getNextMonthEnd = () =>
+  new Date(new Date().getFullYear(), new Date().getMonth() + 2, 1);
+
 const protectRange = (range) => {
   const protection = range.protect();
 
@@ -383,7 +386,7 @@ const handleMovedLessons = () => {
 
   const nearEvents = calendar.getEvents(
     getCurrentMonthStart(),
-    getNextWeekEnd()
+    getNextMonthEnd()
   );
 
   for (const lesson of movedLessons) {
