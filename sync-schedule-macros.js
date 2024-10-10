@@ -76,10 +76,8 @@ const buildEndDate = (startDate, duration) => {
   return new Date(startDate.getTime() + durationMs);
 };
 
-const buildEventTitle = ({ name, price, grade, goal, isMoved }) =>
-  `${isMoved ? "(ПЕРЕНОС)" : ""}${name} ${grade ? `${grade} класс` : ""}  ${
-    goal ? goal : ""
-  } (${price})`;
+const buildEventTitle = ({ name, price, grade, goal }) =>
+  `${name} ${grade ? `${grade} класс` : ""}  ${goal ? goal : ""} (${price})`;
 
 const getSheetMainTableValues = (sheetName) => {
   const [headers, ...rows] = spreadsheet
@@ -307,7 +305,10 @@ const updateGoogleCalendarEvents = () => {
   const { rows: currentMonthFactLessons } =
     getFactLessonsTableValues(currentMonth);
   const { rows: nextMonthFactLessons } = getFactLessonsTableValues(nextMonth);
-  const nearestLessons = [...currentMonthFactLessons, ...nextMonthFactLessons];
+  const nearestLessons = [
+    ...currentMonthFactLessons,
+    ...nextMonthFactLessons,
+  ].filter((x) => x.status === LESSON_STATUS.planned);
 
   for (const lesson of nearestLessons) {
     const { name, price, date, duration, grade, goal } = lesson;
@@ -364,7 +365,70 @@ const deleteCanceledEvents = () => {
         x.getTitle()?.includes(eventTitleActive)
     );
 
-    event.deleteEvent();
+    event?.deleteEvent();
+  }
+};
+
+const handleMovedLessons = () => {
+  const [currentMonth, nextMonth] = buildCurrentAndNextMonth();
+  const { rows: currentMonthFactLessons } =
+    getFactLessonsTableValues(currentMonth);
+  const { rows: nextMonthFactLessons } = getFactLessonsTableValues(nextMonth);
+  const movedLessons = [
+    ...currentMonthFactLessons,
+    ...nextMonthFactLessons,
+  ].filter(
+    ({ status, moveToDate }) => status === LESSON_STATUS.moved && moveToDate
+  );
+
+  const nearEvents = calendar.getEvents(
+    getCurrentMonthStart(),
+    getNextWeekEnd()
+  );
+
+  for (const lesson of movedLessons) {
+    const { name, price, moveToDate, duration, grade, goal } = lesson;
+    const eventTitle = buildEventTitle({ name, price, grade, goal });
+    const newEventTitle = `(ПЕРЕНОС) ${eventTitle}`;
+
+    // Create new event for moved lesson
+    if (moveToDate && new Date(moveToDate) != "Invalid Date") {
+      const endDate = buildEndDate(moveToDate, duration);
+      const isExist = nearEvents.find(
+        (event) =>
+          event.getStartTime().getTime() === moveToDate.getTime() &&
+          event.getTitle().includes(newEventTitle)
+      );
+
+      if (!isExist) {
+        const event = calendar.createEvent(newEventTitle, moveToDate, endDate);
+        if (goal) event?.setColor(goalTagToColor(goal));
+      }
+    }
+
+    // Modify original event title if it exists
+    const originalEvent = nearEvents.find(
+      (event) =>
+        event.getStartTime().getTime() === lesson.date.getTime() &&
+        event.getTitle().includes(eventTitle)
+    );
+
+    if (originalEvent) {
+      originalEvent.deleteEvent();
+    }
+
+    for (const event of nearEvents.filter((x) =>
+      x.getTitle().includes("(ПЕРЕНОС)")
+    )) {
+      const eventTitle = event.getTitle();
+      const isExist = nearestLessons.find(
+        ({ name, price, date, duration, grade, goal }) =>
+          event.getStartTime().getTime() === moveToDate?.getTime?.() &&
+          eventTitle?.includes(newEventTitle)
+      );
+
+      if (!isExist) event.deleteEvent();
+    }
   }
 };
 
@@ -374,4 +438,5 @@ const syncSchedule = () => {
   markEndnedLessons();
   updateGoogleCalendarEvents();
   deleteCanceledEvents();
+  handleMovedLessons();
 };
