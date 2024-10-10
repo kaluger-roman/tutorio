@@ -29,10 +29,10 @@ const FACT_LESSONS_COLUMN_INDEXES = {
   goal: 2,
   price: 3,
   date: 4,
-  duration: 5,
-  isRegular: 6,
-  status: 7,
-  moveToDate: 8,
+  status: 5,
+  moveToDate: 6,
+  duration: 7,
+  isRegular: 8,
 };
 
 const CALENDAR_COLORS = {
@@ -161,7 +161,8 @@ const factLessonRowToData = (row) => ({
   moveToDate: row[FACT_LESSONS_COLUMN_INDEXES.moveToDate],
 });
 
-const buildFactLessonsSheetName = (monthNum) => `Факт. ${MONTHS[monthNum]}`;
+const buildFactLessonsSheetName = (monthNum) =>
+  `Факт. ${MONTHS[monthNum]}. ${new Date().getFullYear()}`;
 
 const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 const calendar = CalendarApp.getDefaultCalendar();
@@ -256,10 +257,10 @@ const createFactLessonsFromSchedule = () => {
             goal,
             price,
             nearestDate,
-            duration,
-            true,
             LESSON_STATUS.planned,
             "",
+            duration,
+            true,
           ],
         ]);
 
